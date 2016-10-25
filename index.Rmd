@@ -41,7 +41,7 @@ Another view about the data if we use `head()` for displaying the first few rows
 kable(head(loan_data))
 ```
 
-We had been informed about the content of the columns in the course but without that the columns were very intuitively named.
+We had been informed about the content of the columns in the course but without that the columns were anyway very intuitively named.
 
 |Variable Type|Variable|Description|
 |-------------|--------|-------------------------------------------------------|
@@ -113,7 +113,7 @@ OL_anninc_threshold_hi <- quantile(loan_data$annual_inc, 0.75)+1.5*IQR(loan_data
 |age|`r OL_age_threshold_low`|`r OL_age_threshold_hi`|`r length(which(loan_data$age<OL_age_threshold_low))`|`r length(which(loan_data$age>OL_age_threshold_hi))`|
 |annual_inc|`r OL_anninc_threshold_low`|`r OL_anninc_threshold_hi`|`r length(which(loan_data$annual_inc<OL_anninc_threshold_low))`|`r length(which(loan_data$annual_inc>OL_anninc_threshold_hi))`|
 
-Luckily, our dataset was more or less tidy therefore no observation occured below the lower boundaries that would have actually made sense. Outer the upper boundaries we could see significant number of observations. The thresholds set for age and annual income variables, using the general outlier threshold rule, are sort of strict, given that we might assume by nature that customers above 40 years and $140k still belonged appropriately to our dataset. Therefore I decided to remove only those two extreme outliers (annual income above $6M and age above 130) from the dataset. (This happened to be one single observation.)
+Luckily, our dataset was more or less tidy therefore no observation occured below the lower boundaries that actually makes sense. Outer the upper boundaries we could see significant number of observations. The thresholds set for age and annual income variables, using the general outlier threshold rule, are sort of strict, given that we might assume by nature that customers above 40 years and having over $140k annual still valid observations and want to include them in our model. Therefore I decided to remove only those two extreme outliers (annual income above $6M and age above 130) from the dataset. (This happened to be one single observation.)
 
 ```{r remove extreme outliers}
 OL_idx <- which(loan_data$annual_inc>5000000 | loan_data$age>130)
@@ -147,7 +147,7 @@ hist(loan_data_nonOL$age, main = "",
 
 In case of missing data, the following strategies can be considered:
 
- - **Deletion**: to delete observation or the entire variable. If there are only few observation having missing values, observations are to be deleted; in case of large number of missing value in a column, the deletion of the variable should be considered.
+ - **Deletion**: to delete observation or the entire variable. If there are only few observations having missing values, observations are to be deleted; in case of large number of missing value in a column, the deletion of the variable should be considered.
  - **Replacement**: replacement with some central value, e.g. median imputation
  - **Keep**: many models can not deal with missing values so eventually they just ignore (delete) those observations. To be on the safe side, we can perform the so-called coarse classification that transforms continuous variable into categorical providing us the opportunity to place missing values into an arbitrary bin.
 
