@@ -2,8 +2,8 @@
 title: "Credit Risk Modeling in R"
 subtitle: "DataCamp"
 author: "Attila Toth"
-output: html_document
 runtime: shiny
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -79,7 +79,8 @@ The best way to to explore continuous variables, to identify potential outliers 
 
 All of the plots had showed fairly expected results (so I excluded them from this documentation), except for the following two:
 
-```{r simple plots, fig.align='center', cache=TRUE}
+```{r simple plots, fig.align='center'}
+renderPlot({
 par(mfrow=c(1,2))
 
 plot(loan_data$annual_inc/1000, ylab = "Annual Income (k $)")
@@ -91,6 +92,7 @@ plot(loan_data$age, ylab = "Age")
 points(which(loan_data$age>100),
        loan_data$age[loan_data$age>100], 
        col = "red")
+})
 ```
 
 ## Outliers
@@ -120,7 +122,8 @@ loan_data_nonOL <- loan_data[-OL_idx,]
 
 My adjusted dataset showed the following distributions:
 
-```{r adj histograms, fig.align='center', cache=TRUE, fig.height=15}
+```{r adj histograms, fig.align='center', fig.height=15}
+renderPlot({
 par(mfrow=c(4,2))
 hist(loan_data_nonOL$loan_amnt, main = "", 
      xlab = "Loan Amount", ylab="")
@@ -137,6 +140,7 @@ hist(loan_data_nonOL$annual_inc, main = "",
      xlab = "Annual Income", ylab="")
 hist(loan_data_nonOL$age, main = "", 
      xlab = "Age", ylab="")
+})
 ```
 
 ## Missing Data
