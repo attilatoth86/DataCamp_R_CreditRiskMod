@@ -1,0 +1,203 @@
+---
+title: "Credit Risk Modeling in R"
+subtitle: "DataCamp"
+author: "Attila Toth"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gmodels)
+library(knitr)
+
+options(scipen=999)
+```
+
+# Introduction and data preparation
+
+This chapter begins with a general introduction to credit risk models, will explore a real-life data set, then preprocess the data set such that it's in the appropriate format before applying the credit risk models.
+
+## Sourcing data
+
+In the beginning of the course we had been provided with data set, sourced from the following location: <https://assets.datacamp.com/course/credit-risk-modeling-in-r/loan_data_ch1.rds> We will be examining the dataset `loan_data` throughout the exercises in this course.
+
+## Dataset Overview
+
+```{r load in data}
+loan_data <- readRDS("loan_data_ch1.rds")
+```
+
+As always, it is recommended to take a quick first look at our data. With using `str()`, we can get an idea about the data structure. This case it tells us the following:
+
+```{r structure of the dataset}
+str(loan_data)
+```
+
+Another view about the data if we use `head()` for displaying the first few rows.
+
+```{r retrieve the first few rows}
+kable(head(loan_data))
+```
+
+We had been informed about the content of the columns in the course but without that the columns were very intuitively named.
+
+|Variable Type|Variable|Description|
+|-------------|--------|-------------------------------------------------------|
+|Response Variable|loan_status|1 = loan defaulted, 0 = loan not defaulted|
+|Explanatory Variables|loan_amt|Amount of the loan|
+||int_rate|Interest rate applied on the loan|
+||grade|Buro score of the customer; A-G highest-lowest class of creditworthiness. This reflects the credit history of the individual (behavioural variable)|
+||emp_legth|Length of employment|
+||home_ownership|Home ownership status|
+||annual_inc|Annual income|
+||age|Age of the customer|
+
+After downloading and loading in `loan_data`, we are interested about the defaulted loans in the data set. We want to get an idea of the number, and percentage of defaults. Defaults are usually rare, so we always want to check what the proportion of defaults is in the examined dataset. The `gmodels::CrossTable()` function is very useful here.
+
+```{r CrossTable(loan_status)}
+CrossTable(loan_data$loan_status)
+```
+
+To learn more about variable structures and spot unexpected tendencies in the data, we should examine the relationship between `loan_status` and certain factor variables. For example, we would expect that the proportion of defaults in the group of customers with worse grades (worst credit rating score) is substantially higher than the proportion of defaults in the grade A group (best credit rating score).
+
+```{r CrossTable() other variables}
+CrossTable(loan_data$grade, loan_data$loan_status,
+           prop.r = T,
+           prop.c = F,
+           prop.t = F,
+           prop.chisq = F
+           )
+```
+
+The table above tells us, the proportion of defaults increases when the credit rating moves from A to G.
+
+## Visuals
+
+The best way to to explore continuous variables, to identify potential outliers or unexpected data structures is always some sort of quick visualization that can provide some early information before any further processing. So I just started off with simply plotting all variables in the dataset.
+
+All of the plots had showed fairly expected results (so I excluded them from this documentation), except for the following two:
+
+```{r simple plots, fig.align='center', cache=TRUE}
+par(mfrow=c(1,2))
+
+plot(loan_data$annual_inc/1000, ylab = "Annual Income (k $)")
+points(which(loan_data$annual_inc>5000000),
+       loan_data$annual_inc[loan_data$annual_inc>5000000]/1000, 
+       col = "red")
+
+plot(loan_data$age, ylab = "Age")
+points(which(loan_data$age>100),
+       loan_data$age[loan_data$age>100], 
+       col = "red")
+```
+
+## Outliers
+
+Apparently, we encountered some outliers above around the age of **140** (!!) and annual income of **$6M**. Without having significant expertise in a particular business domain, a generally accepted way, a rule of thumb, to introduce outlier thresholds is to filter out data points that exceed the boundaries of interquartile range, the first quartile (Q1) and the third quartile (Q3), with more than 1.5 times the interquartile range (IQR) itself, i.e. values greater than Q3 + 1.5 x IQR or lower than Q1 - 1.5 x IQR.
+
+```{r threshold calculation}
+OL_age_threshold_low <- quantile(loan_data$age, 0.25)-1.5*IQR(loan_data$age)
+OL_age_threshold_hi <- quantile(loan_data$age, 0.75)+1.5*IQR(loan_data$age)
+
+OL_anninc_threshold_low <- quantile(loan_data$annual_inc, 0.25)-1.5*IQR(loan_data$annual_inc)
+OL_anninc_threshold_hi <- quantile(loan_data$annual_inc, 0.75)+1.5*IQR(loan_data$annual_inc)
+```
+
+|Variable|Outlier Boundaries||Number of Observations Outer Boundaries||
+|---|---|---|---|---|
+||Lower|Upper|Lower|Upper|
+|age|`r OL_age_threshold_low`|`r OL_age_threshold_hi`|`r length(which(loan_data$age<OL_age_threshold_low))`|`r length(which(loan_data$age>OL_age_threshold_hi))`|
+|annual_inc|`r OL_anninc_threshold_low`|`r OL_anninc_threshold_hi`|`r length(which(loan_data$annual_inc<OL_anninc_threshold_low))`|`r length(which(loan_data$annual_inc>OL_anninc_threshold_hi))`|
+
+Luckily, our dataset was more or less tidy therefore no observation occured below the lower boundaries that would have actually made sense. Outer the upper boundaries we could see significant number of observations. The thresholds set for age and annual income variables, using the general outlier threshold rule, are sort of strict, given that we might assume by nature that customers above 40 years and $140k still belonged appropriately to our dataset. Therefore I decided to remove only those two extreme outliers (annual income above $6M and age above 130) from the dataset. (This happened to be one single observation.)
+
+```{r remove extreme outliers}
+OL_idx <- which(loan_data$annual_inc>5000000 | loan_data$age>130)
+loan_data_nonOL <- loan_data[-OL_idx,]
+```
+
+My adjusted dataset showed the following distributions:
+
+```{r adj histograms, fig.align='center', cache=TRUE, fig.height=15}
+par(mfrow=c(4,2))
+hist(loan_data_nonOL$loan_amnt, main = "", 
+     xlab = "Loan Amount", ylab="")
+hist(loan_data_nonOL$int_rate, main = "", 
+     xlab = "Interest Rate Value", ylab="")
+plot(loan_data_nonOL$grade, main = "", 
+     xlab = "Grade")
+hist(loan_data_nonOL$emp_length, main = "", 
+     xlab = "Employment Length (in years)", ylab="")
+plot(loan_data_nonOL$home_ownership, main = "", 
+     xlab = "Home Ownership Status")
+hist(loan_data_nonOL$annual_inc, main = "",
+     breaks = sqrt(nrow(loan_data_nonOL)),
+     xlab = "Annual Income", ylab="")
+hist(loan_data_nonOL$age, main = "", 
+     xlab = "Age", ylab="")
+```
+
+## Missing Data
+
+In case of missing data, the following strategies can be considered:
+
+ - **Deletion**: to delete observation or the entire variable. If there are only few observation having missing values, observations are to be deleted; in case of large number of missing value in a column, the deletion of the variable should be considered.
+ - **Replacement**: replacement with some central value, e.g. median imputation
+ - **Keep**: many models can not deal with missing values so eventually they just ignore (delete) those observations. To be on the safe side, we can perform the so-called coarse classification that transforms continuous variable into categorical providing us the opportunity to place missing values into an arbitrary bin.
+
+|Strategy|Continuous Variable|Categorical Variable|
+|---|---|---|
+|**Delete**|delete rows/columns|delete rows/columns|
+|**Replace**|median imputation|using the most frequent category|
+|**Keep**|keep as NA/coarse classification|create "missing" category|
+
+Using `summary()` function on our dataset the number of missing values can be easily identified.
+
+```{r missing data}
+summary(loan_data_nonOL)
+```
+
+We encountered missing values in `emp_length` and `int_rate` variables. I created three variants of the original dataset using the three strategies explained above.
+
+First, the simpliest solution is the deletion of those records that carry NA values either in `emp_length` or in `int_rate` variables.
+
+```{r delete NA records}
+NA_idx_del <- which(is.na(loan_data_nonOL$emp_length) | is.na(loan_data_nonOL$int_rate))
+loan_data_nonOL_nonNA <- loan_data_nonOL[-NA_idx_del,]
+```
+
+In the second approach, I replaced NAs with the medians of the respective variables.
+
+```{r median imputation}
+median_int_rate <- median(loan_data_nonOL$int_rate, na.rm = T)
+median_emp_length <- median(loan_data_nonOL$emp_length, na.rm = T)
+
+loan_data_nonOL_med <- loan_data_nonOL
+
+loan_data_nonOL_med[is.na(loan_data_nonOL_med$int_rate),"int_rate"] <- median_int_rate
+loan_data_nonOL_med[is.na(loan_data_nonOL_med$emp_length),"emp_length"] <- median_emp_length
+```
+
+Finally, the 
+
+### Train - Test Split
+
+In order to validate our model at a later point in time, we have to separate our dataset into training and testing sections before we start model build. We build our model, train our algorithm, on training set and verify it on the "unseen" testing set to get a realistic view about its performance.
+
+We perform this separation usually with random sampling.
+
+```{r training-testing set separation}
+set.seed(123)
+train_idx <- sample(1:nrow(loan_data_nonOL_nonNA),2/3*nrow(loan_data_nonOL_nonNA))
+
+loan_data_train <- loan_data_nonOL_nonNA[train_idx, ]
+loan_data_test <- loan_data_nonOL_nonNA[-train_idx, ]
+```
+
+
+
+
+
+
+
