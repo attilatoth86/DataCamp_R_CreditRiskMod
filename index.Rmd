@@ -122,8 +122,8 @@ loan_data_nonOL <- loan_data[-OL_idx,]
 
 My adjusted dataset showed the following distributions:
 
-```{r adj histograms, fig.align='center', fig.height=15}
-renderPlot({
+```{r adj histograms, fig.align='center'}
+renderPlot(height = 900, {
 par(mfrow=c(4,2))
 hist(loan_data_nonOL$loan_amnt, main = "", 
      xlab = "Loan Amount", ylab="")
