@@ -3,6 +3,7 @@ title: "Credit Risk Modeling in R"
 subtitle: "DataCamp"
 author: "Attila Toth"
 output: html_document
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
