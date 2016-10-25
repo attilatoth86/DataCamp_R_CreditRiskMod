@@ -184,7 +184,7 @@ loan_data_nonOL_med[is.na(loan_data_nonOL_med$int_rate),"int_rate"] <- median_in
 loan_data_nonOL_med[is.na(loan_data_nonOL_med$emp_length),"emp_length"] <- median_emp_length
 ```
 
-Finally, the third
+Finally, the third option
 
 ### Train - Test Split
 
