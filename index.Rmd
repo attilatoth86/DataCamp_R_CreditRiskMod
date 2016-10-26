@@ -279,9 +279,14 @@ If the value of $x_j$ goes up by 1, the odds will be multiplied by $e^{\beta_j}$
 
 In my simple model above it means, if `age` goes up by 1 year the odds for default are multiplied by $e^{`r log_model[["coefficients"]]["age"]`}$ (`r exp(log_model[["coefficients"]]["age"])`). In summary, one extra age lowers the probability of default by nearly 1%.
 
+### Interpretation of coefficients of categorical variables
 
+When we include a categorical variable in a logistic regression model, we will get a parameter estimate for all but on of its categories. This category for which no parameter estimate is given is called **reference category**. The parameter for each of the other categories represents the odds ratio in favor of a loan default between the category of interest and the reference category.
 
-
+```{r}
+log_model_cat <- glm(loan_status ~ ir_cat, family = "binomial", data = loan_data_train)
+log_model_cat
+```
 
 
 
