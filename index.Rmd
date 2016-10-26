@@ -169,7 +169,7 @@ First, the simpliest solution is the deletion of those records that carry NA val
 
 ```{r delete NA records}
 NA_idx_del <- which(is.na(loan_data_nonOL$emp_length) | is.na(loan_data_nonOL$int_rate))
-loan_data_nonOL_nonNA <- loan_data_nonOL[-NA_idx_del,]
+loan_data_nonOL_delNA <- loan_data_nonOL[-NA_idx_del,]
 ```
 
 In the second approach, I replaced NAs with the medians of the respective variables.
@@ -184,7 +184,37 @@ loan_data_nonOL_med[is.na(loan_data_nonOL_med$int_rate),"int_rate"] <- median_in
 loan_data_nonOL_med[is.na(loan_data_nonOL_med$emp_length),"emp_length"] <- median_emp_length
 ```
 
-Finally, the third option
+Finally, the third option is to keep NAs in a special way that model will be able to use them. Given that both `int_rate` and `emp_length` variables are continuous, the coarse classification will be the technique I use.
+
+I categorized the variables according to the followings:
+
+ - `emp_length`: 0-1, 1-3, 3-5, 5-10, 10+ and **"Missing"**
+ - `int_rate`: 0-8, 8-11, 11-13.5, 13.5+ and **"Missing"**
+
+In order to avoid any potential information loss, I separated the categorization into new variables, `emp_length` -> `emp_length_cat` and `int_rate` -> `ir_cat`
+
+```{r coarse classification}
+loan_data_nonOL_keepNA <- loan_data_nonOL # create a copy of the dataset
+
+loan_data_nonOL_keepNA$emp_length_cat <- rep(NA, length(loan_data_nonOL_keepNA$emp_length))
+loan_data_nonOL_keepNA$ir_cat <- rep(NA, length(loan_data_nonOL_keepNA$int_rate))
+
+loan_data_nonOL_keepNA$emp_length_cat[which(loan_data_nonOL_keepNA$emp_length<=1)] <- "0-1"
+loan_data_nonOL_keepNA$emp_length_cat[which(loan_data_nonOL_keepNA$emp_length>1 & loan_data_nonOL_keepNA$emp_length<=3)] <- "1-3"
+loan_data_nonOL_keepNA$emp_length_cat[which(loan_data_nonOL_keepNA$emp_length>3 & loan_data_nonOL_keepNA$emp_length<=5)] <- "3-5"
+loan_data_nonOL_keepNA$emp_length_cat[which(loan_data_nonOL_keepNA$emp_length>5 & loan_data_nonOL_keepNA$emp_length<=10)] <- "5-10"
+loan_data_nonOL_keepNA$emp_length_cat[which(loan_data_nonOL_keepNA$emp_length>10)] <- "10+"
+loan_data_nonOL_keepNA$emp_length_cat[which(is.na(loan_data_nonOL_keepNA$emp_length))] <- "Missing"
+
+loan_data_nonOL_keepNA$ir_cat[which(loan_data_nonOL_keepNA$int_rate<=8)] <- "0-8"
+loan_data_nonOL_keepNA$ir_cat[which(loan_data_nonOL_keepNA$int_rate>8 & loan_data_nonOL_keepNA$int_rate<=11)] <- "8-11"
+loan_data_nonOL_keepNA$ir_cat[which(loan_data_nonOL_keepNA$int_rate>11 & loan_data_nonOL_keepNA$int_rate<=13.5)] <- "11-13.5"
+loan_data_nonOL_keepNA$ir_cat[which(loan_data_nonOL_keepNA$int_rate>13.5)] <- "13.5+"
+loan_data_nonOL_keepNA$ir_cat[which(is.na(loan_data_nonOL_keepNA$int_rate))] <- "Missing"
+
+loan_data_nonOL_keepNA$emp_length_cat <- as.factor(loan_data_nonOL_keepNA$emp_length_cat)
+loan_data_nonOL_keepNA$ir_cat <- as.factor(loan_data_nonOL_keepNA$ir_cat)
+```
 
 ### Train - Test Split
 
@@ -194,10 +224,10 @@ We perform this separation usually with random sampling.
 
 ```{r training-testing set separation}
 set.seed(123)
-train_idx <- sample(1:nrow(loan_data_nonOL_nonNA),2/3*nrow(loan_data_nonOL_nonNA))
+train_idx <- sample(1:nrow(loan_data_nonOL_keepNA),2/3*nrow(loan_data_nonOL_keepNA))
 
-loan_data_train <- loan_data_nonOL_nonNA[train_idx, ]
-loan_data_test <- loan_data_nonOL_nonNA[-train_idx, ]
+loan_data_train <- loan_data_nonOL_keepNA[train_idx, ]
+loan_data_test <- loan_data_nonOL_keepNA[-train_idx, ]
 ```
 
 
