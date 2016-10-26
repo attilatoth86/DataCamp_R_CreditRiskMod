@@ -243,29 +243,43 @@ str(loan_data_train)
 
 # Logistic Regression
 
-Similar in many ways to linear regression except for that the output value of the model is between 0 and 1. That's why logistic regression models can be good for probability estimation as these values fall by definition between 0 and 1. 
+Logistic regression models are similar in many ways to linear regression except for that the output value of these models is between 0 and 1. That is why logistic regression models can be good for purposes where probability estimation is required since probability values fall by definition between 0 and 1.
 
-P(loan_status=1 | X1,X2,...,Xm) = 1 / (1 + e^-[B0+B1X1+B2X2+...+BmXm])
+In our case, we are looking for the following value, the probability of loan_status being 1 (loan default) given various explaining variable values:
 
-[B0+B1X1+B2X2+...+BmXm] - linear predictor; combination of parameters and variables
+$$P(\textrm{loan_status} = 1 | x_1,x_2,...,x_m) = \frac{1}{1 + e^{-(\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m)}}$$
 
-To fit logistic regression model, we can use the generalized linear model function, `glm()`. To order R for fitting logistic model, we have to set `family = "binomial"`.
+In this equation gives us the linear predictor, $\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m$, the combination of parameters and variables. To fit logistic regression model, we can use the generalized linear model function, `glm()`. To instruct the function for fitting logistic model, we have to pass `family = "binomial"` attribute to the function.
 
 ```{r fitting logistic regression}
 log_model <- glm(loan_status ~ age, family = "binomial", data = loan_data_train)
 log_model
 ```
 
-Intercept is the estimate for B0, values under various variables are estimates for B1, B2,..., etc.
+`(Intercept)` is the estimate for $\beta_0$, values under various variables are estimates for $\beta_1$, $\beta_2$,...,$\beta_m$.
 
-Probability of default divided by probability of non-default gives the odds in favor of default that equals the exponential function of the linear predictor.
+Given the following changes on the previous equation,
 
-Interpretation of coefficients: if a value Xj goes up by 1 -> the odds are multiplied by e^Bj.
+$$P(\textrm{loan_status} = 1 | x_1,x_2,...,x_m) = \frac{1}{1 + e^{-(\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m)}} = \frac{e^{\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m}}{1 + e^{\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m}}$$
 
- - Odds decrease as Xj increases: Bj<0 -> e^Bj<1
- - Odds increase as Xj decreases: Bj>0 -> e^Bj>1
- 
-In our model it means, if age goes up by 1 the odds for default are multiplied by e^-0.007576 ~ 0.9925. One extra age lowers the probability of default by nearly 1%.
+$$P(\textrm{loan_status} = 0 | x_1,x_2,...,x_m) = 1 - \frac{e^{\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m}}{1 + e^{\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m}} = \frac{1}{1 + e^{\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m}}$$
+
+The probability of default divided by the probability of non-default gives the odds in favor of default that equals the exponential function of the linear predictor:
+
+$$\frac{P(\textrm{loan_status} = 1 | x_1,x_2,...,x_m)}{P(\textrm{loan_status} = 0 | x_1,x_2,...,x_m)} = e^{\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m}$$
+
+This feature helps us a lot in the interpretation of our model.
+
+## Interpretation
+
+If the value of $x_j$ goes up by 1, the odds will be multiplied by $e^{\beta_j}$. Note, this means 
+
+ - if $\beta_j < 0$ -> $e^{\beta_j} < 1$, so the odds will be multiplied by a value lower than 1, odds will decrease
+ - if $\beta_j > 0$ -> $e^{\beta_j} > 1$, so the odds will be multiplied by a value higher than 1, odds will increase
+
+In my simple model above it means, if `age` goes up by 1 year the odds for default are multiplied by $e^{`r log_model[["coefficients"]]["age"]`}$ (`r exp(log_model[["coefficients"]]["age"])`). In summary, one extra age lowers the probability of default by nearly 1%.
+
+
 
 
 
