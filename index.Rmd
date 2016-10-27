@@ -3,7 +3,10 @@ title: "Credit Risk Modeling in R"
 subtitle: "DataCamp"
 author: "Attila Toth"
 runtime: shiny
-output: html_document
+output: 
+  html_document:
+    theme: united
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
@@ -245,11 +248,11 @@ str(loan_data_train)
 
 Logistic regression models are similar in many ways to linear regression except for that the output value of these models is between 0 and 1. That is why logistic regression models can be good for purposes where probability estimation is required since probability values fall by definition between 0 and 1.
 
-In our case, we are looking for the following value, the probability of loan_status being 1 (loan default) given various explaining variable values:
+In our case, we are looking for the following value, the probability of `loan_status` being 1 (loan default) given various explaining variable values:
 
 $$P(\textrm{loan_status} = 1 | x_1,x_2,...,x_m) = \frac{1}{1 + e^{-(\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m)}}$$
 
-In this equation gives us the linear predictor, $\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m$, the combination of parameters and variables. To fit logistic regression model, we can use the generalized linear model function, `glm()`. To instruct the function for fitting logistic model, we have to pass `family = "binomial"` attribute to the function.
+In this equation gives us the linear predictor, $\beta_0+\beta_1x_1+\beta_2x_2+...+\beta_mx_m$, the combination of parameters and variables. To fit logistic regression model, we can use the generalized linear model function, `glm()`, by instructing the general function with a specific attribute, i.e. `family = "binomial"`.
 
 ```{r fitting logistic regression}
 log_model <- glm(loan_status ~ age, family = "binomial", data = loan_data_train)
@@ -274,8 +277,8 @@ This feature helps us a lot in the interpretation of our model.
 
 If the value of $x_j$ goes up by 1, the odds will be multiplied by $e^{\beta_j}$. Note, this means 
 
- - if $\beta_j < 0$ -> $e^{\beta_j} < 1$, so the odds will be multiplied by a value lower than 1, odds will decrease
- - if $\beta_j > 0$ -> $e^{\beta_j} > 1$, so the odds will be multiplied by a value higher than 1, odds will increase
+ - if $\beta_j < 0$ then $e^{\beta_j} < 1$, so the odds will be multiplied by a value lower than 1, odds will decrease
+ - if $\beta_j > 0$ then $e^{\beta_j} > 1$, so the odds will be multiplied by a value higher than 1, odds will increase
 
 In my simple model above it means, if `age` goes up by 1 year the odds for default are multiplied by $e^{`r log_model[["coefficients"]]["age"]`}$ (`r exp(log_model[["coefficients"]]["age"])`). In summary, one extra age lowers the probability of default by nearly 1%.
 
