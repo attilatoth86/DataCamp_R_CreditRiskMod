@@ -19,15 +19,15 @@ library(knitr)
 options(scipen=999)
 ```
 
-# Introduction and data preparation
+# 1. Introduction and data preparation
 
 This chapter begins with a general introduction to credit risk models, will explore a real-life data set, then preprocess the data set such that it's in the appropriate format before applying the credit risk models.
 
-## Sourcing data
+## 1.1 Sourcing data
 
 In the beginning of the course we had been provided with data set, sourced from the following location: <https://assets.datacamp.com/course/credit-risk-modeling-in-r/loan_data_ch1.rds> We will be examining the dataset `loan_data` throughout the exercises in this course.
 
-## Dataset Overview
+## 1.2 Dataset Overview
 
 ```{r load in data}
 loan_data <- readRDS("loan_data_ch1.rds")
@@ -77,9 +77,9 @@ CrossTable(loan_data$grade, loan_data$loan_status,
 
 The table above tells us, the proportion of defaults increases when the credit rating moves from A to G.
 
-## Visuals
+## 1.3 Visuals
 
-The best way to to explore continuous variables, to identify potential outliers or unexpected data structures is always some sort of quick visualization that can provide some early information before any further processing. So I just started off with simply plotting all variables in the dataset.
+The best way to explore continuous variables, to identify potential outliers or unexpected data structures is always some sort of quick visualization that can provide some early information before any further processing. So I just started off with simply plotting all variables in the dataset.
 
 All of the plots had showed fairly expected results (so I excluded them from this documentation), except for the following two:
 
@@ -99,7 +99,7 @@ points(which(loan_data$age>100),
 })
 ```
 
-## Outliers
+## 1.4 Outliers
 
 Apparently, we encountered some outliers above around the age of **140** (!!) and annual income of **$6M**. Without having significant expertise in a particular business domain, a generally accepted way, a rule of thumb, to introduce outlier thresholds is to filter out data points that exceed the boundaries of interquartile range, the first quartile (Q1) and the third quartile (Q3), with more than 1.5 times the interquartile range (IQR) itself, i.e. values greater than Q3 + 1.5 x IQR or lower than Q1 - 1.5 x IQR.
 
@@ -147,7 +147,7 @@ hist(loan_data_nonOL$age, main = "",
 })
 ```
 
-## Missing Data
+## 1.5 Missing Data
 
 In case of missing data, the following strategies can be considered:
 
@@ -220,7 +220,7 @@ loan_data_nonOL_keepNA$emp_length_cat <- as.factor(loan_data_nonOL_keepNA$emp_le
 loan_data_nonOL_keepNA$ir_cat <- as.factor(loan_data_nonOL_keepNA$ir_cat)
 ```
 
-### Train - Test Split
+### 1.6 Train - Test Split
 
 In order to validate our model at a later point in time, we have to separate our dataset into training and testing sections before we start model build. We build our model, train our algorithm, on training set and verify it on the "unseen" testing set to get a realistic view about its performance.
 
@@ -245,7 +245,7 @@ Let's have a look at the structure of the training set.
 str(loan_data_train)
 ```
 
-# Logistic Regression
+# 2. Logistic Regression
 
 Logistic regression models are similar in many ways to linear regression except for that the output value of these models is between 0 and 1. That is why logistic regression models can be good for purposes where probability estimation is required since probability values fall by definition between 0 and 1.
 
@@ -274,7 +274,7 @@ $$\frac{P(\textrm{loan_status} = 1 | x_1,x_2,...,x_m)}{P(\textrm{loan_status} = 
 
 This feature helps us a lot in the interpretation of our model.
 
-## Interpretation
+## 2.1 Interpretation
 
 If the value of $x_j$ goes up by 1, the odds will be multiplied by $e^{\beta_j}$. Note, this means 
 
@@ -283,7 +283,9 @@ If the value of $x_j$ goes up by 1, the odds will be multiplied by $e^{\beta_j}$
 
 In my simple model above it means, if `age` goes up by 1 year the odds for default are multiplied by $e^{`r log_model[["coefficients"]]["age"]`}$ (`r exp(log_model[["coefficients"]]["age"])`). In summary, one extra age lowers the probability of default by nearly 1%.
 
-### Interpretation of coefficients of categorical variables
+The interpretation of a single parameter still holds when including several variables in a model, along with the assumption of keeping the other variables unchanged.
+
+### 2.1.1 Interpretation of coefficients of categorical variables
 
 When we include a categorical variable in a logistic regression model, we will get a parameter estimate for all but on of its categories. This category for which no parameter estimate is given is called **reference category**. The parameter for each of the other categories represents the odds ratio in favor of a loan default between the category of interest and the reference category.
 
@@ -292,9 +294,87 @@ log_model_cat <- glm(loan_status ~ ir_cat, family = "binomial", data = loan_data
 log_model_cat
 ```
 
+### 2.1.2 Model evaluation
 
+In order to evaluate models there are a number of things to be aware of.
 
+ - **Parameter values** a.k.a. coefficients
+ - **Statistical significance of parameter estimates** above. The significance of a parameter is often refered to as a p-value or in R: `Pr(>|t|)`. When a parameter is not significant, it cannot be assured that this parameter is significantly different from 0. Statistical significance is important, in general, it only makes sense to interpret the effects for significant parameters.
 
+```{r}
+log_model_multi <- glm(loan_status ~ age + ir_cat + grade + loan_amnt + annual_inc, data = loan_data_train, family = "binomial")
+
+summary(log_model_multi)
+```
+
+## 2.2 Prediction
+
+After having created the model, `predict()` function provides us the functionality to make predictions. For demonstration purposes, I quickly created a small logistic model, adding `age` and `ir_cat` variables as predictors to estimate loan default probability.
+
+```{r}
+log_model_small <- glm(loan_status ~ age * ir_cat, family = "binomial", data = loan_data_train)
+prediction_all_small <- predict(log_model_small, loan_data_test, type = "response")
+```
+
+Note: `predict()` function by default returns with the linear predictor for generalized linear models so in order to get the probability, we have to instruct the function with the `type = "response"` argument.
+
+After having obtained all the predictions for the test set elements, it is useful to get an initial idea of how good the model is at discriminating by looking at the `range()` of predicted probabilities. A small range might mean that predictions for the test set cases do not lie far apart, and therefore the model might not be very good at discriminating good from bad customers.
+
+## 2.3 Prediction Evaluation
+
+For evaluation of models, we can make use of confusion matrix. Confusion matrices compare the actual response variable values to the predicted values in a tabular format. They are contigency tables of correct and incorrect classifications. (Correct classifications are at the diagonal, often called as True-Positives, True-Negatives.)
+
+Confusion Matrix measures:
+
+ - Accuracy: $\frac{True Negatives + True Positives}{Total Classifications}$ = proportion of correctly classified cases
+ - Sensitivity: $\frac{True Positives}{True Positives + False Negatives}$ = proportion of correctly classified positive outcomes
+ - Specificity: $\frac{True Negatives}{True Negatives + False Positives}$ = proportion of correctly classified negative outcomes
+
+The problem we are facing in this case is that `loan_status` variable carries 0s and 1s while predicted probability of defaults are values between 0 and 1. In order to circumvent this gap, we have to introduce the term of cutoff or threshold value. If a predicted probability is above the threshold we will flag the observation as default otherwise as non-default.
+
+I created a new model that includes all variables of the `loan_data` and using this model generated predictions:
+
+```{r}
+log_model_full <- glm(loan_status ~ ., family = "binomial", data = loan_data_train)
+prediction_all_full <- predict(log_model_full, loan_data_test, type = "response")
+range(prediction_all_full)
+```
+
+Predicted default probabilities range from almost 0 to 0.55. The obvious choice for a cutoff value would be 0.5. Let's see what we get then:
+
+```{r}
+pred_co_05 <- ifelse(prediction_all_full<0.5,0,1)
+cm_05 <- table(loan_data_test$loan_status,pred_co_05)
+cm_05
+```
+
+With the cutoff value of 0.5 my prediction shows the following measures:
+
+ - Accuracy: `r sum(diag(cm_05))/sum(cm_05)`
+ - Sensitivity: `r cm_05[2,2]/sum(cm_05[2,])`
+ - Specificity: `r cm_05[1,1]/sum(cm_05[1,])`
+
+Setting a lower, 0.15, threshold will result the following:
+
+```{r}
+pred_co_015 <- ifelse(prediction_all_full<0.15,0,1)
+cm_015 <- table(loan_data_test$loan_status,pred_co_015)
+cm_015
+```
+
+ - Accuracy: `r sum(diag(cm_015))/sum(cm_015)`
+ - Sensitivity: `r cm_015[2,2]/sum(cm_015[2,])`
+ - Specificity: `r cm_015[1,1]/sum(cm_015[1,])`
+
+General properties of credit risk model are that by increasing cutoff value
+
+ - the accuracy increases,
+ - the sensitivity decreases and
+ - the specificity increases.
+
+This phenomenon is purely due to the fact that defaults are usually rare events.
+
+# 3. Decision Trees
 
 
 
