@@ -23,11 +23,31 @@ options(scipen=999)
 
 This chapter begins with a general introduction to credit risk models, will explore a real-life data set, then preprocess the data set such that it's in the appropriate format before applying the credit risk models.
 
-## 1.1 Sourcing data
+## 1.1 Credit Risk
+
+Credit risk is the risk of default on a debt that may arise from a borrower failing to make required payments. In finance, default is the failure to meet the legal obligations of a loan, i.e. failing to make recurring payments, or pay back priciple of a security on maturity. Within a regular loan contract, the lender provides fund for the borrower upfront that the borrower has to pay back over time according to an agreed schedule most cases together with interest in addition. Certainly, there is a risk associated to these transactions as the borrower may not be able to reimburse the provided fund fully. These events cause losses for the lenders, mainly for banks. The concept of expected loss is composed by three elements:
+
+ - **Probability of default** (PD): the probability that the borrower will fail to make a full repayment to the lender
+ - **Exposure at default** (EAD): expected value of the loan at the time of default (similarly: the amount of the loan that still needs to be repayed at the time of default)
+ - **Loss given default** (LGD): amount of loss given default (percentage of EAD)
+
+$$\textbf{E}\text{xpected }\textbf{L}\text{oss} = \textbf{P}\text{robability of }\textbf{D}\text{efault} * \textbf{E}\text{xposure }\textbf{A}\text{t }\textbf{D}\text{efault} * \textbf{L}\text{oss }\textbf{G}\text{iven }\textbf{D}\text{efault}$$
+
+The area of credit risk modeling is all about the event of loan default, therefore the determination of default probability is crucial. In this activity banks usually use past default patterns to predict default probabilities of future customers and loan transactions. The following pieces of information are used for the examination:
+
+ - **application information**: descriptive information about the borrower (incl. income, age, etc)
+ - **behavioral information**: past behaviours of customers (incl. account transaction and balance history)
+
+Useful reads:
+
+ - <https://en.wikipedia.org/wiki/Credit_risk>
+ - <https://en.wikipedia.org/wiki/Default_(finance)>
+
+## 1.2 Sourcing data
 
 In the beginning of the course we had been provided with data set, sourced from the following location: <https://assets.datacamp.com/course/credit-risk-modeling-in-r/loan_data_ch1.rds> We will be examining the dataset `loan_data` throughout the exercises in this course.
 
-## 1.2 Dataset Overview
+## 1.3 Dataset Overview
 
 ```{r load in data}
 loan_data <- readRDS("loan_data_ch1.rds")
@@ -77,7 +97,7 @@ CrossTable(loan_data$grade, loan_data$loan_status,
 
 The table above tells us, the proportion of defaults increases when the credit rating moves from A to G.
 
-## 1.3 Visuals
+## 1.4 Visuals
 
 The best way to explore continuous variables, to identify potential outliers or unexpected data structures is always some sort of quick visualization that can provide some early information before any further processing. So I just started off with simply plotting all variables in the dataset.
 
@@ -99,7 +119,7 @@ points(which(loan_data$age>100),
 })
 ```
 
-## 1.4 Outliers
+## 1.5 Outliers
 
 Apparently, we encountered some outliers above around the age of **140** (!!) and annual income of **$6M**. Without having significant expertise in a particular business domain, a generally accepted way, a rule of thumb, to introduce outlier thresholds is to filter out data points that exceed the boundaries of interquartile range, the first quartile (Q1) and the third quartile (Q3), with more than 1.5 times the interquartile range (IQR) itself, i.e. values greater than Q3 + 1.5 x IQR or lower than Q1 - 1.5 x IQR.
 
@@ -147,7 +167,7 @@ hist(loan_data_nonOL$age, main = "",
 })
 ```
 
-## 1.5 Missing Data
+## 1.6 Missing Data
 
 In case of missing data, the following strategies can be considered:
 
@@ -220,7 +240,7 @@ loan_data_nonOL_keepNA$emp_length_cat <- as.factor(loan_data_nonOL_keepNA$emp_le
 loan_data_nonOL_keepNA$ir_cat <- as.factor(loan_data_nonOL_keepNA$ir_cat)
 ```
 
-### 1.6 Train - Test Split
+### 1.7 Train - Test Split
 
 In order to validate our model at a later point in time, we have to separate our dataset into training and testing sections before we start model build. We build our model, train our algorithm, on training set and verify it on the "unseen" testing set to get a realistic view about its performance.
 
@@ -326,9 +346,11 @@ For evaluation of models, we can make use of confusion matrix. Confusion matrice
 
 Confusion Matrix measures:
 
- - Accuracy: $\frac{True Negatives + True Positives}{Total Classifications}$ = proportion of correctly classified cases
- - Sensitivity: $\frac{True Positives}{True Positives + False Negatives}$ = proportion of correctly classified positive outcomes
- - Specificity: $\frac{True Negatives}{True Negatives + False Positives}$ = proportion of correctly classified negative outcomes
+$Accuracy = \frac{True Negatives + True Positives}{Total Classifications}$ = proportion of correctly classified cases
+
+$Sensitivity = \frac{True Positives}{True Positives + False Negatives}$ = proportion of correctly classified positive outcomes
+
+$Specificity = \frac{True Negatives}{True Negatives + False Positives}$ = proportion of correctly classified negative outcomes
 
 The problem we are facing in this case is that `loan_status` variable carries 0s and 1s while predicted probability of defaults are values between 0 and 1. In order to circumvent this gap, we have to introduce the term of cutoff or threshold value. If a predicted probability is above the threshold we will flag the observation as default otherwise as non-default.
 
